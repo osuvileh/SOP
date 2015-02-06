@@ -8,6 +8,8 @@ sudo apt-get install python-pip
 #SimpleCV
 sudo apt-get install ipython python-opencv python-scipy python-numpy python-setuptools python-pip
 sudo pip install https://github.com/sightmachine/SimpleCV/zipball/master
+#Scipy
+sudo pip install scikit-image
 
 sudo apt-get install python-pygame
 sudo pip install svgwrite
