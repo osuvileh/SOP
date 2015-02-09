@@ -9,6 +9,7 @@ sudo apt-get install python-pip
 sudo apt-get install ipython python-opencv python-scipy python-numpy python-setuptools python-pip
 sudo pip install https://github.com/sightmachine/SimpleCV/zipball/master
 #Scipy
+sudo apt-get install python-dev libxml2-dev libxslt-dev
 sudo pip install scikit-image
 
 sudo apt-get install python-pygame
@@ -20,3 +21,5 @@ wget http://www.imagemagick.org/download/ImageMagick-6.9.0-4.tar.gz
 tar -xzvf ImageMagick-6.9.0-4.tar.gz
 cd ImageMagick-6.9.0-4
 sudo checkinstall
+
+https://github.com/rec/gpu_fft_py
