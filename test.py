@@ -4,6 +4,7 @@ from SimpleCV.Segmentation import RunningSegmentation
 from skimage import data, draw,color, morphology, transform, feature, io, filter
 from skimage import data
 from skimage.filter import threshold_adaptive, threshold_yen, threshold_otsu
+from skimage.feature import match_descriptors, corner_peaks, corner_harris, plot_matches, BRIEF
 
 #cam = Camera()
 #img = cam.getImage()
@@ -11,6 +12,11 @@ from skimage.filter import threshold_adaptive, threshold_yen, threshold_otsu
 
 class Object:
 	featureVector = None
+	
+class Feature:
+	def __init__(self, keypoints, descriptors):
+		self.keypoints = keypoints
+		self.descriptors = descriptors
 	
 class Database:
 	def __init(self):
@@ -27,7 +33,10 @@ def segmentation(image):
 
 def featureExtractor(segmented):
 	"""Extracts features from segmented image(s)"""
-	#
+	keypoints = corner_peaks(corner_harris(segmented), min_distance=5)
+	extractor = BRIEF()
+	extractor.extract(segmented, keypoints)
+	return Feature(keypoints[extractor.mask], extractor.descriptors)
 
 def matchFinder(features):
 	"""Matches object features against database"""
@@ -36,6 +45,14 @@ def matchFinder(features):
 def addToDatabase(object):
 	#
 	pass
+	
+def getImage(cam):
+	img = Image("lenna")
+	try:
+		img = cam.getImage()
+	except:
+		pass
+	return img
 
 def main():
 	"""Main execution of the program"""
@@ -44,9 +61,10 @@ def main():
 	i = 0
 	while 1:
 		
-		img = cam.getImage()
+		img = getImage(cam)
 		PIL = img.getNumpy() #Numpy required for some functions, flips the axes. PIL orientation would be correct
 		seg = segmentation(PIL)
+		feature = featureExtractor(seg)
 
 		io.imsave("%i%s" % (i,'.jpg'), seg)
 		#img = RunningSegmentation.addImage(img)
