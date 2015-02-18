@@ -114,7 +114,7 @@ def main():
 	#initializing camera
 	#cam = Camera()
 	surf = cv2.SURF(200)
-	camera = cv2.VideoCapture("test.mp4")
+	camera = cv2.VideoCapture(0)
 	i = 0
 	while 1:
 		ret, frame = camera.read()
