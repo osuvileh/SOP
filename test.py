@@ -6,8 +6,8 @@ from SimpleCV import Camera, Image, Segmentation
 from SimpleCV.Segmentation.RunningSegmentation import RunningSegmentation
 from scipy.cluster.vq import kmeans, vq
 from scipy import ndimage
-from scipy.sparse.csgraph import connected_components
 from numpy import reshape, uint8, flipud
+import numpy as np
 from skimage import data, draw,color, morphology, transform, feature, io, filter
 from skimage.filter.rank import equalize
 from skimage.morphology import disk, diamond
@@ -74,10 +74,24 @@ def segmentation(image):
 	area, labels = ndimage.label(area)
 	area = area*50
 	return area
+	
+def extractSegments(image, segmented):
+	segments = []
+	values = np.unique(segmented)
+	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
+	for value in values:
+		segment = gray.copy()
+		segment[segmented != value] = 0
+		segments.append(segment)
+	return segments;
 
-def featureExtractor(segmented):
+def featureExtractor(surf, segments):
 	"""Extracts features from segmented image(s)"""
-	return 0;
+	features = []
+	for segment in segments:
+		keypoints, descriptors = surf.detect(segment, None, useProvidedKeypoints = False)
+		features.append(Feature(keypoints, descriptors))
+	return features;
 
 def matchFinder(features):
 	"""Matches object features against database"""
@@ -99,7 +113,8 @@ def main():
 	"""Main execution of the program"""
 	#initializing camera
 	#cam = Camera()
-	camera = cv2.VideoCapture(0)
+	surf = cv2.SURF(200)
+	camera = cv2.VideoCapture("test.mp4")
 	i = 0
 	while 1:
 		ret, frame = camera.read()
@@ -110,8 +125,15 @@ def main():
 		#seg.getRawImage()
 		#seg.save(str(i))
 		segmented = segmentation(frame)
+		segments = extractSegments(frame, segmented)
+		features = featureExtractor(surf, segments)
 		
-		cv2.imwrite("%i%s" % (i,'.jpg'), segmented)
+		index = 1
+		frame[segments[index] == 0] = 0
+		for keypoint in features[index].keypoints:
+			cv2.circle(frame, (int(keypoint.pt[0]), int(keypoint.pt[1])), 4, (255, 0, 0), thickness=1, lineType=8, shift=0)
+		
+		cv2.imwrite("%i%s" % (i,'.jpg'), frame)
 		print 'saving image', i
 		#features = featureExtractor(segmented)
 		#print 'features: ', features
