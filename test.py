@@ -50,15 +50,20 @@ def segmentation(image):
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	blurred = cv2.GaussianBlur(gray,(5,5),0)
 
-	ret, bw = cv2.threshold(blurred, 127,255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
-	erosion = cv2.erode(bw,diamond(5),iterations = 1)
-	dilation = cv2.dilate(erosion,diamond(5),iterations=1)
+	ret, bw = cv2.threshold(blurred, 0,255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+	#bw = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,11,0)
+	erosion = cv2.erode(bw,disk(3),iterations = 1)
+	dilation = cv2.dilate(erosion,disk(3),iterations=1)
+	
+	
 	#quantized = equalize(image, diamond(5))
-	edges = cv2.Canny(image, lowThreshold, max_lowThreshold)
+	edges = cv2.Canny(blurred, lowThreshold, max_lowThreshold)
 
-	dilateEdges = cv2.dilate(edges,diamond(4),iterations=1)
-	area = dilation & dilateEdges
-
+	dilateEdges = cv2.dilate(edges,disk(4),iterations=1)
+	erodeEdges = cv2.erode(dilateEdges,disk(4), iterations=1)
+	area = erosion | dilateEdges
+	#area = cv2.erode(area,disk(3), iterations=1)
+	#area = cv2.dilate(area, disk(3), iterations=1)
 	area, labels = ndimage.label(area)
 	area = area*50
 	return area
@@ -86,20 +91,23 @@ def getImage(cam):
 def main():
 	"""Main execution of the program"""
 	#initializing camera
-	cam = Camera()
+	#cam = Camera()
+	camera = cv2.VideoCapture(0)
 	i = 0
 	while 1:
-		
-		img = getImage(cam)
-		PIL = img.getNumpy() #Numpy required for some functions, flips the axes. PIL orientation would be correct
-		seg = segmentation(PIL)
-		feature = featureExtractor(seg)
+		ret, frame = camera.read()
 
-		io.imsave("%i%s" % (i,'.jpg'), seg)
+		#io.imsave("%i%s" % (i,'.jpg'), seg)
 		#img = RunningSegmentation.addImage(img)
 		#seg = img.RunningSegmentation.getSegmentedImage()
 		#seg.getRawImage()
 		#seg.save(str(i))
+		segmented = segmentation(frame)
+		
+		cv2.imwrite("%i%s" % (i,'.jpg'), segmented)
+		print 'saving image', i
+		#features = featureExtractor(segmented)
+		#print 'features: ', features
 		i+=1
 
 if __name__ == '__main__':
