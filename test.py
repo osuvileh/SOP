@@ -7,12 +7,6 @@ from SimpleCV.Segmentation.RunningSegmentation import RunningSegmentation
 from scipy.cluster.vq import kmeans, vq
 from scipy import ndimage
 from numpy import reshape, uint8, flipud
-from skimage import data, draw,color, morphology, transform, feature, io, filter
-from skimage.filter.rank import equalize
-from skimage.morphology import disk, diamond
-from skimage.filter import threshold_adaptive, threshold_yen, threshold_otsu
-from skimage import img_as_ubyte, img_as_uint
-from skimage.feature import match_descriptors, corner_peaks, corner_harris, plot_matches, BRIEF
 
 
 class Object:
@@ -71,10 +65,7 @@ def segmentation(image):
 
 def featureExtractor(segmented):
 	"""Extracts features from segmented image(s)"""
-	keypoints = corner_peaks(corner_harris(segmented), min_distance=5)
-	extractor = BRIEF()
-	extractor.extract(segmented, keypoints)
-	return Feature(keypoints[extractor.mask], extractor.descriptors)
+	return 0;
 
 def matchFinder(features):
 	"""Matches object features against database"""
