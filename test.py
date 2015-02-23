@@ -95,7 +95,7 @@ def featureExtractor(detector, extractor, segments):
 	"""Extracts features from segmented image(s)"""
 	features = []
 	for segment in segments:
-		keypoints= detector.detect(segment)
+		keypoints = detector.detect(segment)
 		keypoints, descriptors = extractor.compute(segment, keypoints)
 		features.append(Feature(keypoints, descriptors))
 	return features;
@@ -134,8 +134,10 @@ def main():
 	matcher = cv2.BFMatcher(cv2.NORM_L2)
 	detector = cv2.FeatureDetector_create("SURF")
 	extractor = cv2.DescriptorExtractor_create("SURF")
-	camera = cv2.VideoCapture(0)
+	camera = cv2.VideoCapture("test.mp4")
 	frameNumber = 0
+	
+	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
 	while 1:
 		ret, frame = camera.read()
 
@@ -151,10 +153,9 @@ def main():
 		featureMatches = []
 		for a, data in enumerate(database):
 			for b, feature in enumerate(features):
-				matches = matcher.knnMatch(data.descriptors, trainDescriptors = feature.descriptors, k = 2)
-				pairs = filter_matches(data.keypoints, feature.keypoints, matches)
-				if (len(pairs) > 7):
-					print a, b
+				if (data.descriptors != None and feature.descriptors != None):
+					matches = matcher.knnMatch(data.descriptors, trainDescriptors = feature.descriptors, k = 2)
+					pairs = filter_matches(data.keypoints, feature.keypoints, matches)
 					featureMatches.append(Match(data, feature, pairs))
 		
 		#index = 0
@@ -162,9 +163,11 @@ def main():
 		#for keypoint in features[index].keypoints:
 		#	cv2.circle(frame, (int(keypoint.pt[0]), int(keypoint.pt[1])), 4, (255, 0, 0), thickness=1, lineType=8, shift=0)
 		
+		colorIndex = 0
 		for match in featureMatches:
 			for pair in match.keypointPairs:
-				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])),(255,0,0),1)
+				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])),colors[colorIndex % len(colors)],1)
+			colorIndex += 1
 				
 		database = []
 		for feature in features:
