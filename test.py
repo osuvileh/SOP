@@ -85,11 +85,12 @@ def extractSegments(image, segmented):
 		segments.append(segment)
 	return segments;
 
-def featureExtractor(surf, segments):
+def featureExtractor(detector, extractor, segments):
 	"""Extracts features from segmented image(s)"""
 	features = []
 	for segment in segments:
-		keypoints, descriptors = surf.detect(segment, None, useProvidedKeypoints = False)
+		keypoints= detector.detect(segment)
+		keypoints, descriptors = extractor.compute(segment, keypoints)
 		features.append(Feature(keypoints, descriptors))
 	return features;
 
@@ -113,7 +114,8 @@ def main():
 	"""Main execution of the program"""
 	#initializing camera
 	#cam = Camera()
-	surf = cv2.SURF(200)
+	detector = cv2.FeatureDetector_create("SURF")
+	extractor = cv2.DescriptorExtractor_create("SURF")
 	camera = cv2.VideoCapture(0)
 	i = 0
 	while 1:
@@ -126,7 +128,7 @@ def main():
 		#seg.save(str(i))
 		segmented = segmentation(frame)
 		segments = extractSegments(frame, segmented)
-		features = featureExtractor(surf, segments)
+		features = featureExtractor(detector, extractor, segments)
 		
 		index = 1
 		frame[segments[index] == 0] = 0
