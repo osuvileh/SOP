@@ -134,7 +134,7 @@ def main():
 	matcher = cv2.BFMatcher(cv2.NORM_L2)
 	detector = cv2.FeatureDetector_create("SURF")
 	extractor = cv2.DescriptorExtractor_create("SURF")
-	camera = cv2.VideoCapture("test.mp4")
+	camera = cv2.VideoCapture(0)
 	frameNumber = 0
 	
 	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
