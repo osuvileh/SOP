@@ -2,8 +2,6 @@ import signal
 import cv2
 import cv2.cv as cv
 import numpy
-from SimpleCV import Camera, Image, Segmentation
-from SimpleCV.Segmentation.RunningSegmentation import RunningSegmentation
 from scipy.cluster.vq import kmeans, vq
 from scipy import ndimage
 from numpy import reshape, uint8, flipud
@@ -108,15 +106,7 @@ def addToDatabase(object):
 	#
 	pass
 	
-def getImage(cam):
-	img = Image("lenna")
-	try:
-		img = cam.getImage()
-	except:
-		pass
-	return img
-	
-def filter_matches(kp1, kp2, matches, ratio = 0.6):
+def filterMatches(kp1, kp2, matches, ratio = 0.6):
     mkp1, mkp2 = [], []
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
@@ -131,10 +121,10 @@ def main():
 	#initializing camera
 	#cam = Camera()
 	database = []
-	matcher = cv2.BFMatcher(cv2.NORM_L2)
-	detector = cv2.FeatureDetector_create("SURF")
-	extractor = cv2.DescriptorExtractor_create("SURF")
-	camera = cv2.VideoCapture(0)
+	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
+	detector = cv2.FeatureDetector_create("ORB")
+	extractor = cv2.DescriptorExtractor_create("ORB")
+	camera = cv2.VideoCapture("test.mp4")
 	frameNumber = 0
 	
 	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
@@ -155,7 +145,7 @@ def main():
 			for b, feature in enumerate(features):
 				if (data.descriptors != None and feature.descriptors != None):
 					matches = matcher.knnMatch(data.descriptors, trainDescriptors = feature.descriptors, k = 2)
-					pairs = filter_matches(data.keypoints, feature.keypoints, matches)
+					pairs = filterMatches(data.keypoints, feature.keypoints, matches)
 					featureMatches.append(Match(data, feature, pairs))
 		
 		#index = 0
