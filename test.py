@@ -23,6 +23,12 @@ class Feature:
 	def __init__(self, keypoints, descriptors):
 		self.keypoints = keypoints
 		self.descriptors = descriptors
+		
+class Match:
+	def __init__(self, dbFeature, feature, keypointPairs):
+		self.dbFeature = dbFeature
+		self.feature = feature
+		self.keypointPairs = keypointPairs
 	
 class Database:
 	def __init(self):
@@ -109,15 +115,27 @@ def getImage(cam):
 	except:
 		pass
 	return img
+	
+def filter_matches(kp1, kp2, matches, ratio = 0.6):
+    mkp1, mkp2 = [], []
+    for m in matches:
+        if len(m) == 2 and m[0].distance < m[1].distance * ratio:
+            m = m[0]
+            mkp1.append( kp1[m.queryIdx] )
+            mkp2.append( kp2[m.trainIdx] )
+    kp_pairs = zip(mkp1, mkp2)
+    return kp_pairs
 
 def main():
 	"""Main execution of the program"""
 	#initializing camera
 	#cam = Camera()
+	database = []
+	matcher = cv2.BFMatcher(cv2.NORM_L2)
 	detector = cv2.FeatureDetector_create("SURF")
 	extractor = cv2.DescriptorExtractor_create("SURF")
 	camera = cv2.VideoCapture(0)
-	i = 0
+	frameNumber = 0
 	while 1:
 		ret, frame = camera.read()
 
@@ -130,16 +148,33 @@ def main():
 		segments = extractSegments(frame, segmented)
 		features = featureExtractor(detector, extractor, segments)
 		
-		index = 1
-		frame[segments[index] == 0] = 0
-		for keypoint in features[index].keypoints:
-			cv2.circle(frame, (int(keypoint.pt[0]), int(keypoint.pt[1])), 4, (255, 0, 0), thickness=1, lineType=8, shift=0)
+		featureMatches = []
+		for a, data in enumerate(database):
+			for b, feature in enumerate(features):
+				matches = matcher.knnMatch(data.descriptors, trainDescriptors = feature.descriptors, k = 2)
+				pairs = filter_matches(data.keypoints, feature.keypoints, matches)
+				if (len(pairs) > 7):
+					print a, b
+					featureMatches.append(Match(data, feature, pairs))
 		
-		cv2.imwrite("%i%s" % (i,'.jpg'), frame)
-		print 'saving image', i
+		#index = 0
+		#frame[segments[index] == 0] = 0 
+		#for keypoint in features[index].keypoints:
+		#	cv2.circle(frame, (int(keypoint.pt[0]), int(keypoint.pt[1])), 4, (255, 0, 0), thickness=1, lineType=8, shift=0)
+		
+		for match in featureMatches:
+			for pair in match.keypointPairs:
+				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])),(255,0,0),1)
+				
+		database = []
+		for feature in features:
+			database.append(feature)
+		
+		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
+		print 'saving image', frameNumber
 		#features = featureExtractor(segmented)
 		#print 'features: ', features
-		i+=1
+		frameNumber += 1
 
 if __name__ == '__main__':
 	try:
