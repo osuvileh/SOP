@@ -55,18 +55,18 @@ def segmentation(image):
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	blurred = cv2.GaussianBlur(gray,(5,5),0)
 
-	ret, bw = cv2.threshold(blurred, 0,255, cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+	ret, bw = cv2.threshold(blurred, 0,255, cv2.THRESH_BINARY+cv2.THRESH_OTSU)
 	#bw = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,11,0)
-	erosion = cv2.erode(bw,disk(3),iterations = 1)
-	dilation = cv2.dilate(erosion,disk(3),iterations=1)
+	dilation = cv2.dilate(bw,disk(4),iterations=1)
+	erosion = cv2.erode(dilation,disk(4),iterations = 1)
 	
 	
 	#quantized = equalize(image, diamond(5))
-	edges = cv2.Canny(blurred, lowThreshold, max_lowThreshold)
+	edges = cv2.Canny(image, lowThreshold, max_lowThreshold)
 
 	dilateEdges = cv2.dilate(edges,disk(4),iterations=1)
-	erodeEdges = cv2.erode(dilateEdges,disk(4), iterations=1)
-	area = erosion | dilateEdges
+	erodeEdges = cv2.erode(dilateEdges,disk(3), iterations=1)
+	area = erosion | erodeEdges
 	#area = cv2.erode(area,disk(3), iterations=1)
 	#area = cv2.dilate(area, disk(3), iterations=1)
 	area, labels = ndimage.label(area)
@@ -116,7 +116,7 @@ def main():
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
-	camera = cv2.VideoCapture("0")
+	camera = cv2.VideoCapture("test.mp4")
 	frameNumber = 0
 	
 	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
@@ -124,6 +124,8 @@ def main():
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
+		print "saving labeled segmentation"
+		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		segments = extractSegments(frame, segmented)
 		features = featureExtractor(detector, extractor, segments)
 		
