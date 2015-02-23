@@ -1,17 +1,10 @@
-import signal
 import cv2
 import cv2.cv as cv
 import numpy
-from scipy.cluster.vq import kmeans, vq
-from scipy import ndimage
 from numpy import reshape, uint8, flipud
-import numpy as np
-from skimage import data, draw,color, morphology, transform, feature, io, filter
-from skimage.filter.rank import equalize
+from scipy import ndimage
+from scipy.cluster.vq import kmeans, vq
 from skimage.morphology import disk, diamond
-from skimage.filter import threshold_adaptive, threshold_yen, threshold_otsu
-from skimage import img_as_ubyte, img_as_uint
-from skimage.feature import match_descriptors, corner_peaks, corner_harris, plot_matches, BRIEF
 
 
 class Object:
@@ -39,6 +32,7 @@ def reduceVal(val):
 	if val < 128:
 		return 64
 	return 255
+	
 def colourQuantization(image):
 	red = image[:,:,2]
 	green = image[:,:,1]
@@ -81,7 +75,7 @@ def segmentation(image):
 	
 def extractSegments(image, segmented):
 	segments = []
-	values = np.unique(segmented)
+	values = numpy.unique(segmented)
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	for value in values:
 		segment = gray.copy()
@@ -106,7 +100,7 @@ def addToDatabase(object):
 	#
 	pass
 	
-def filterMatches(kp1, kp2, matches, ratio = 0.6):
+def filterMatches(kp1, kp2, matches, ratio = 0.75):
     mkp1, mkp2 = [], []
     for m in matches:
         if len(m) == 2 and m[0].distance < m[1].distance * ratio:
@@ -118,24 +112,17 @@ def filterMatches(kp1, kp2, matches, ratio = 0.6):
 
 def main():
 	"""Main execution of the program"""
-	#initializing camera
-	#cam = Camera()
 	database = []
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
-	camera = cv2.VideoCapture(0)
+	camera = cv2.VideoCapture("0")
 	frameNumber = 0
 	
 	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
 	while 1:
 		ret, frame = camera.read()
-
-		#io.imsave("%i%s" % (i,'.jpg'), seg)
-		#img = RunningSegmentation.addImage(img)
-		#seg = img.RunningSegmentation.getSegmentedImage()
-		#seg.getRawImage()
-		#seg.save(str(i))
+		
 		segmented = segmentation(frame)
 		segments = extractSegments(frame, segmented)
 		features = featureExtractor(detector, extractor, segments)
@@ -146,7 +133,8 @@ def main():
 				if (data.descriptors != None and feature.descriptors != None):
 					matches = matcher.knnMatch(data.descriptors, trainDescriptors = feature.descriptors, k = 2)
 					pairs = filterMatches(data.keypoints, feature.keypoints, matches)
-					featureMatches.append(Match(data, feature, pairs))
+					if len(pairs) >= 7:
+						featureMatches.append(Match(data, feature, pairs))
 		
 		#index = 0
 		#frame[segments[index] == 0] = 0 
@@ -165,8 +153,10 @@ def main():
 		
 		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
 		print 'saving image', frameNumber
-		#features = featureExtractor(segmented)
-		#print 'features: ', features
+		
+		for i, segment in enumerate(segments):
+			cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
+		
 		frameNumber += 1
 
 if __name__ == '__main__':
