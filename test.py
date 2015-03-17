@@ -1,27 +1,23 @@
 import cv2
 import cv2.cv as cv
 import numpy
-from numpy import reshape, uint8, flipud
-from scipy import ndimage
-from scipy.cluster.vq import kmeans, vq
-from skimage.morphology import disk, diamond
 from skimage.measure import label
-from skimage.morphology import closing, square
-from skimage.segmentation import clear_border
-
+from skimage.morphology import square
 
 class Object:
-	featureVector = None
+	def __init__(self, name, color):
+		self.features = []
+		self.name = name
+		self.color = color
 	
 class Feature:
-	def __init__(self, keypoints, descriptors, name):
+	def __init__(self, keypoints, descriptors):
 		self.keypoints = keypoints
 		self.descriptors = descriptors
-		self.name = name
 		
 class Match:
-	def __init__(self, dbFeature, feature, keypointPairs):
-		self.dbFeature = dbFeature
+	def __init__(self, object, feature, keypointPairs):
+		self.object = object
 		self.feature = feature
 		self.keypointPairs = keypointPairs
 		self._calculateBoundingBox()
@@ -91,14 +87,14 @@ def extractSegments(image, segmented):
 		segments.append(segment)
 	return segments;
 
-def featureExtractor(detector, extractor, segments, frameNumber):
+def featureExtractor(detector, extractor, segments):
 	"""Extracts features from segmented image(s)"""
 	features = []
 	for i, segment in enumerate(segments):
 		ret, mask = cv2.threshold(segment, 0, 255, cv2.THRESH_BINARY)
 		keypoints = detector.detect(segment, mask)
 		keypoints, descriptors = extractor.compute(segment, keypoints, mask)
-		features.append(Feature(keypoints, descriptors, str(frameNumber) + str(i)))
+		features.append(Feature(keypoints, descriptors))
 	return features;
 
 def matchFinder(features):
@@ -116,12 +112,12 @@ def filterMatches(kp1, kp2, matches, ratio = 0.6):
             m = m[0]
             mkp1.append( kp1[m.queryIdx] )
             mkp2.append( kp2[m.trainIdx] )
-    kp_pairs = zip(mkp1, mkp2)
-    return kp_pairs
+    kpPairs = zip(mkp1, mkp2)
+    return kpPairs
 
 def main():
 	"""Main execution of the program"""
-	database = []
+	objects = []
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
@@ -129,35 +125,47 @@ def main():
 	frameNumber = 0
 	
 	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
+	colorIndex = 0
+	
 	while 1:
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
-		print "saving labeled segmentation"
 		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		segments = extractSegments(frame, segmented)
-		features = featureExtractor(detector, extractor, segments, frameNumber)
+		features = featureExtractor(detector, extractor, segments)
 		
 		featureMatches = []
 		for a, feature in enumerate(features):
-			isMatch = False
-			for b, data in enumerate(database):
-				if (data.descriptors != None and feature.descriptors != None):
-					matches = matcher.knnMatch(data.descriptors, feature.descriptors, k = 2)
-					pairs = filterMatches(data.keypoints, feature.keypoints, matches)
-					if len(pairs) >= 7:
-						featureMatches.append(Match(data, feature, pairs))
-						isMatch = True
-			if isMatch == False:
-				database.append(feature)
+			isKnownObject = False
+			for b, object in enumerate(objects):
+				if len(object.features) > 3:
+					object.features = object.features[1:]
+				isSameObject = False
+				for c, data in enumerate(object.features):
+					if (data.descriptors != None and feature.descriptors != None):
+						matches = matcher.knnMatch(data.descriptors, feature.descriptors, k = 2)
+						pairs = filterMatches(data.keypoints, feature.keypoints, matches)
+						if len(pairs) >= 7:
+							featureMatches.append(Match(object, feature, pairs))
+							isKnownObject = True
+							isSameObject = True
+				if isSameObject:
+					object.features.append(feature)
+			if not isKnownObject:
+				object = Object(str(frameNumber) + str(a), colors[colorIndex % len(colors)])
+				object.features.append(feature)
+				objects.append(object)
+				colorIndex += 1
 		
-		colorIndex = 0
+		lastName = ""
 		for match in featureMatches:
-			cv2.rectangle(frame, match.min, match.max, colors[colorIndex % len(colors)], 2)
-			cv2.putText(frame, match.dbFeature.name, match.min, cv2.FONT_HERSHEY_PLAIN, 2, colors[colorIndex % len(colors)], 2)
 			for pair in match.keypointPairs:
-				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])), colors[colorIndex % len(colors)], 1)
-			colorIndex += 1
+				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])), match.object.color, 1)
+			if lastName != match.object.name:
+				cv2.rectangle(frame, match.min, match.max, match.object.color, 2)
+				cv2.putText(frame, match.object.name, match.min, cv2.FONT_HERSHEY_PLAIN, 2, match.object.color, 2)
+			lastName = match.object.name
 		
 		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
 		print 'saving image', frameNumber
