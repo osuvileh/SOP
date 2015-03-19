@@ -23,6 +23,7 @@ class Match:
 		self._calculateBoundingBox()
 		
 	def _calculateBoundingBox(self):
+		"""Private function for calculating bounding box of keypoints of the new feature"""
 		minX = 9999
 		minY = 9999
 		maxX = -9999
@@ -47,37 +48,23 @@ class Database:
 	
 def segmentation(image):
 	"""Executes image segmentation based on various features of the video stream"""
-	edgeThreshold = 1
-	lowThreshold = 0
-	max_lowThreshold = 100 #use a function later
-	ratio = 3
-	kernel_size = 3
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
 	ret, bw = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-	#bw = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,11,0)
 	
+	# Close binary image
 	result = cv2.dilate(bw, square(10), iterations = 1)
 	result = cv2.erode(result, square(10), iterations = 1)
 	
+	# Open binary image
 	result = cv2.erode(result, square(10), iterations = 1)
 	result = cv2.dilate(result, square(10), iterations = 1)
 	
-	
-	#quantized = equalize(image, diamond(5))
-	#edges = cv2.Canny(image, lowThreshold, max_lowThreshold)
-
-	#dilateEdges = cv2.dilate(edges,disk(4),iterations=1)
-	#erodeEdges = cv2.erode(dilateEdges,disk(3), iterations=1)
-	#area = erosion | erodeEdges
-	#area = cv2.erode(area,disk(3), iterations=1)
-	#area = cv2.dilate(area, disk(3), iterations=1)
-	#area, labels = ndimage.label(area)
-	#area = area*50
 	return label(result) * 50
 	
 def extractSegments(image, segmented):
+	"""Extracts segments from labeled image"""
 	segments = []
 	values = numpy.unique(segmented)
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
@@ -135,35 +122,54 @@ def main():
 		segments = extractSegments(frame, segmented)
 		features = featureExtractor(detector, extractor, segments)
 		
+		# Iterate through each feature found in the frame
 		featureMatches = []
 		for a, feature in enumerate(features):
 			isKnownObject = False
-			for b, object in enumerate(objects):
-				if len(object.features) > 3:
+			b = 0
+			# Iterate through every known object
+			while b < len(objects):
+				object = objects[b]
+				# To limit processing power needed only n newest occurences of an object are kept
+				if len(object.features) > 5:
 					object.features = object.features[1:]
 				isSameObject = False
 				for c, data in enumerate(object.features):
 					if (data.descriptors != None and feature.descriptors != None):
 						matches = matcher.knnMatch(data.descriptors, feature.descriptors, k = 2)
 						pairs = filterMatches(data.keypoints, feature.keypoints, matches)
-						if len(pairs) >= 7:
+						# Keypoints are matched and filtered
+						# If n matched pairs remain feature is declared matching
+						if len(pairs) >= 10:
 							featureMatches.append(Match(object, feature, pairs))
-							isKnownObject = True
 							isSameObject = True
-				if isSameObject:
-					object.features.append(feature)
+							
+				# The feature is same object if the keypoints match with the currently iterating object
+				if isSameObject and isKnownObject:
+					 # Object is deleted from the pool of known objects if feature found has already been found previous objects
+					 # This is a crude way of removing duplicate objects
+					objects.pop(b)
+				else:
+					if isSameObject:
+						isKnownObject = True
+						object.features.append(feature)
+					b += 1
+				
+			# This feature is a known object if its keypoints match with one existing object
 			if not isKnownObject:
+				# If the feature is not a known object, add it as a the first occurence of a new object
 				object = Object(str(frameNumber) + str(a), colors[colorIndex % len(colors)])
 				object.features.append(feature)
 				objects.append(object)
 				colorIndex += 1
 		
+		# Render object bounding box, keypoints and name if found in current frame
 		lastName = ""
 		for match in featureMatches:
 			for pair in match.keypointPairs:
 				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])), match.object.color, 1)
+			cv2.rectangle(frame, match.min, match.max, match.object.color, 2)
 			if lastName != match.object.name:
-				cv2.rectangle(frame, match.min, match.max, match.object.color, 2)
 				cv2.putText(frame, match.object.name, match.min, cv2.FONT_HERSHEY_PLAIN, 2, match.object.color, 2)
 			lastName = match.object.name
 		
