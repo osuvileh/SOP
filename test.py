@@ -111,6 +111,7 @@ def main():
 	camera = cv2.VideoCapture("test2.mp4")
 	frameNumber = 0
 	
+	# Colors for debugging, each object is given a color to differentiate in the debug image
 	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
 	colorIndex = 0
 	
@@ -127,13 +128,17 @@ def main():
 		for a, feature in enumerate(features):
 			isKnownObject = False
 			b = 0
+			
 			# Iterate through every known object
 			while b < len(objects):
 				object = objects[b]
+				
 				# To limit processing power needed only n newest occurences of an object are kept
 				if len(object.features) > 5:
 					object.features = object.features[1:]
 				isSameObject = False
+				
+				# Iterate through each occurence of the object
 				for c, data in enumerate(object.features):
 					if (data.descriptors != None and feature.descriptors != None):
 						matches = matcher.knnMatch(data.descriptors, feature.descriptors, k = 2)
@@ -144,7 +149,7 @@ def main():
 							featureMatches.append(Match(object, feature, pairs))
 							isSameObject = True
 							
-				# The feature is same object if the keypoints match with the currently iterating object
+				# The feature is the same object if the keypoints match with the currently iterating object
 				if isSameObject and isKnownObject:
 					 # Object is deleted from the pool of known objects if feature found has already been found previous objects
 					 # This is a crude way of removing duplicate objects
