@@ -1,32 +1,186 @@
 import cv2
 import cv2.cv as cv
 import numpy
-from numpy import reshape, uint8, flipud
-from scipy import ndimage
-from scipy.cluster.vq import kmeans, vq
-from skimage.morphology import disk, diamond
 from skimage.measure import label
-from skimage.morphology import closing, square
-from skimage.segmentation import clear_border
+from skimage.morphology import square
+import random
+class BinarySearchTree:
+	"""A binary search tree implementation"""
+	root = None
+	def __init(self, root=None):
+		self.root = root
 
+	def insertObject(self, object, randomize=True):
+		"""Inserts the object in weighted position in the tree. Implementation from 
+		521144A Algorithms and Data Structures 2014 assignment implementation code."""
+		x = self.root
+		y = None
+		i = 0
+		while x != None:
+			y = x
+			i = random.randint(0,1)
+			if i == 0:
+				x = x.left
+			else:
+				x = x.right
+		if y == None:
+			#Tree was empty
+			self.root = object
+			print "added root", self.root
+		else:
+			if i == 0:
+				#print "adding child left", object
+				y.left = object
+			else:
+				y.right = object
+				#print "adding child right", object
+
+
+		#--------For weighted objects. Weighting to be implemented----------
+		# 	if object.key < x.key:
+		# 		x = x.left
+		# 	elif object.key == x.key and randomize==True:
+		# 		#random assignment on equal can significantly reduce the height of the tree
+		# 		rand=random.choice([x.right, x.left])
+		# 		x = rand
+		# 	else:
+		# 		x=x.right
+
+		# object.parent = y
+		
+		# if y == None:
+		# 	#tree was empty
+		# 	self.root = object
+
+		# else:
+
+		# 	if object.key < y.key:
+		# 		y.left = object
+
+		# 	elif randomize==True:
+		# 		#random assignment on equal can significantly reduce the height of the tree
+		# 		if object.key == y.key:
+		# 			rand=random.choice([y.right, y.left])
+		# 			rand=object
+		# 	else:
+		# 		y.right = object
+
+	def startSearch(self, featureList, matcher, colorIndex):
+		#check if tree is empty
+		if self.root == None:
+			#add all new objects to tree if the tree is empty
+			for a, feature in enumerate(featureList):
+				object = Object(str(frameNumber) + str(a), colors[colorIndex % len(colors)], featureList=[feature])
+				#Insert the node into bst
+				self.insertObject(object)
+				#print "object", object
+				colorIndex += 1
+		
+		node = self.root
+		print "node in startSearch", node
+		#Initialize featureMatches for new search
+		featureMatches = []
+		featureMatches = self.objectSearch(node, featureList, matcher, featureMatches, colorIndex)
+
+		return featureMatches
+
+	def objectSearch(self, node, featureList, matcher, featureMatches, colorIndex):
+		"""Recursively iterates through the tree searching for a match"""
+		#skip rotation if leaf node reached
+
+		if not node:
+			return featureMatches
+		print "node.left", node.left
+		left = self.objectSearch(node.left, featureList, matcher, featureMatches, colorIndex)
+		print "node.right", node.right
+		right = self.objectSearch(node.right, featureList, matcher, featureMatches, colorIndex)
+		featureMatches = self.searchMatch(node.left, node.right, featureList, matcher, featureMatches, colorIndex)
+
+		return  
+
+
+	def searchMatch(self, leftNode, rightNode, featureList, matcher, featureMatches, colorIndex):
+		"""Look for feature matches in current node's children."""
+		#matcher = cv2.BFMatcher object
+		print "asdfasdf", leftNode, rightNode
+		if leftNode == None and rightNode == None:
+			return featureMatches
+		nodes = [leftNode, rightNode]
+		for a, feature in enumerate(featureList):
+
+			isKnownObject = False
+			#Check if left or right object matches
+			for node in nodes:
+				print "nodes", nodes
+				#Check that node is Object instances
+				if isinstance(node, Object):
+					print "isinstance node", node
+					#To limit processing power needed only n newest occurrences of an object are kept in the feature list
+					if len(node.features) > 5:
+						node.features = node.features[1:]
+					for featureObject in node.features:
+
+						if featureObject.descriptors != None and node.features != None:
+							for feature in node.features:
+								#Filter keypoints and matches
+								matches = matcher.knnMatch(featureObject.descriptors, feature.descriptors, k=2)
+								pairs = filterMatches(featureObject.keypoints, feature.keypoints, matches)
+								#Feature is declared matching if n matched pairs remain
+								if len(pairs) >= 10:
+									#add new features to existing object
+									node.features.append(feature)
+									#Add match to found matches
+									featureMatches.append(Match(node, feature, pairs))
+
+									isSameObject = True
+									isKnownObject = True
+
+			if not isKnownObject:
+				#If the feature is not a known object, add it as the first occurrence of a new object
+				object = Object(str(frameNumber) + str(a), colors[colorIndex % len(colors)], feature)
+				#Insert the node into bst
+				self.insertObject(object)
+
+				colorIndex += 1
+
+		return featureMatches
+
+	def searchNeighborhood(self, k):
+		"""Returns the first node with key k in the subtree. Used as starting point node for searchMatch()"""
+		#Follows the binary search tree's iterative search algorithm
+		node = self.root
+		while node != None and k != node.key:
+			if k < node.key:
+				node = node.left
+			else:
+				node = node.right
+		return node
+	
 
 class Object:
-	featureVector = None
-	
+	def __init__(self, name, color, featureList=[], key=None, shape=None):
+		self.features = featureList
+		self.name = name
+		self.color = color
+		self.key = key # The key weight value of the node
+		self.left = None # A pointer to the left child node
+		self.right = None # A pointer to the right child node
+		self.parent = None # A pointer to the parent node
+		self.shape = shape
 class Feature:
-	def __init__(self, keypoints, descriptors, name):
+	def __init__(self, keypoints, descriptors):
 		self.keypoints = keypoints
 		self.descriptors = descriptors
-		self.name = name
 		
 class Match:
-	def __init__(self, dbFeature, feature, keypointPairs):
-		self.dbFeature = dbFeature
+	def __init__(self, object, feature, keypointPairs):
+		self.object = object
 		self.feature = feature
 		self.keypointPairs = keypointPairs
 		self._calculateBoundingBox()
 		
 	def _calculateBoundingBox(self):
+		"""Private function for calculating bounding box of keypoints of the new feature"""
 		minX = 9999
 		minY = 9999
 		maxX = -9999
@@ -45,43 +199,29 @@ class Match:
 		self.min = (int(minX), int(minY))
 		self.max = (int(maxX), int(maxY))
 	
-class Database:
-	def __init(self):
-		pass
+
+
+
 	
 def segmentation(image):
 	"""Executes image segmentation based on various features of the video stream"""
-	edgeThreshold = 1
-	lowThreshold = 0
-	max_lowThreshold = 100 #use a function later
-	ratio = 3
-	kernel_size = 3
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
 	ret, bw = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-	#bw = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,11,0)
 	
+	# Close binary image
 	result = cv2.dilate(bw, square(10), iterations = 1)
 	result = cv2.erode(result, square(10), iterations = 1)
 	
+	# Open binary image
 	result = cv2.erode(result, square(10), iterations = 1)
 	result = cv2.dilate(result, square(10), iterations = 1)
 	
-	
-	#quantized = equalize(image, diamond(5))
-	#edges = cv2.Canny(image, lowThreshold, max_lowThreshold)
-
-	#dilateEdges = cv2.dilate(edges,disk(4),iterations=1)
-	#erodeEdges = cv2.erode(dilateEdges,disk(3), iterations=1)
-	#area = erosion | erodeEdges
-	#area = cv2.erode(area,disk(3), iterations=1)
-	#area = cv2.dilate(area, disk(3), iterations=1)
-	#area, labels = ndimage.label(area)
-	#area = area*50
 	return label(result) * 50
 	
 def extractSegments(image, segmented):
+	"""Extracts segments from labeled image"""
 	segments = []
 	values = numpy.unique(segmented)
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
@@ -89,21 +229,84 @@ def extractSegments(image, segmented):
 		segment = gray.copy()
 		segment[segmented != value] = 0
 		segments.append(segment)
+	#delete the segment containing all segments
+	del segments[0]
 	return segments;
 
-def featureExtractor(detector, extractor, segments, frameNumber):
+def featureExtractor(detector, extractor, segments):
 	"""Extracts features from segmented image(s)"""
 	features = []
+	shapes = []
 	for i, segment in enumerate(segments):
 		ret, mask = cv2.threshold(segment, 0, 255, cv2.THRESH_BINARY)
 		keypoints = detector.detect(segment, mask)
 		keypoints, descriptors = extractor.compute(segment, keypoints, mask)
-		features.append(Feature(keypoints, descriptors, str(frameNumber) + str(i)))
-	return features;
+		shape = shapeDetection(segment)
+		shapes.append(shape)
+		features.append(Feature(keypoints, descriptors))
+	return features, shapes;
 
-def matchFinder(features):
+def shapeDetection(image):
+	"""Detects object shape from image"""
+	shape = None
+	#Check if object shape is circle
+	circle = cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 2, 100)
+	if circle is not None:
+			shape = "circle"
+			circles = numpy.round(circle[0,:]).astype("int")
+			for(x,y,r) in circles:
+				cv2.circle(image,(x,y), r,(55, 150, 0), 4)
+	return shape
+
+def matchFinder(features, objects, frameNumber, colorIndex, matcher, shapes):
 	"""Matches object features against database"""
-	#
+	# Iterate through each feature found in the frame
+	featureMatches = []
+	for a, feature in enumerate(features):
+		isKnownObject = False
+		b = 0
+		
+		# Iterate through every known object
+		while b < len(objects):
+			object = objects[b]
+			
+			# To limit processing power needed only n newest occurences of an object are kept
+			if len(object.features) > 5:
+				object.features = object.features[1:]
+			isSameObject = False
+			
+			# Iterate through each occurence of the object
+			for c, data in enumerate(object.features):
+				if (data.descriptors != None and feature.descriptors != None):
+					matches = matcher.knnMatch(data.descriptors, feature.descriptors, k = 2)
+					pairs = filterMatches(data.keypoints, feature.keypoints, matches)
+					# Keypoints are matched and filtered
+					# If n matched pairs remain feature is declared matching
+					if len(pairs) >= 10:
+						featureMatches.append(Match(object, feature, pairs))
+						isSameObject = True
+						
+			# The feature is the same object if the keypoints match with the currently iterating object
+			if isSameObject and isKnownObject:
+				 # Object is deleted from the pool of known objects if feature found has already been found previous objects
+				 # This is a crude way of removing duplicate objects
+				objects.pop(b)
+			else:
+				if isSameObject:
+					isKnownObject = True
+					object.features.append(feature)
+				b += 1
+			
+		# This feature is a known object if its keypoints match with one existing object
+		if not isKnownObject:
+			# If the feature is not a known object, add it as a the first occurence of a new object
+			object = Object(str(frameNumber) + str(a), colors[colorIndex % len(colors)], shape=str(shapes[a]))
+			object.features.append(feature)
+			#Insert object to BinarySearchTree
+			#bst.insertObject(object)
+			objects.append(object) #placeholder
+			colorIndex += 1
+	return featureMatches
 
 def addToDatabase(object):
 	#
@@ -116,48 +319,49 @@ def filterMatches(kp1, kp2, matches, ratio = 0.6):
             m = m[0]
             mkp1.append( kp1[m.queryIdx] )
             mkp2.append( kp2[m.trainIdx] )
-    kp_pairs = zip(mkp1, mkp2)
-    return kp_pairs
+    kpPairs = zip(mkp1, mkp2)
+    return kpPairs
 
 def main():
 	"""Main execution of the program"""
-	database = []
+	objects = []
+	bst  = BinarySearchTree()
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
 	camera = cv2.VideoCapture("test2.mp4")
+	global frameNumber
 	frameNumber = 0
-	
+	# Colors for debugging, each object is given a color to differentiate in the debug image
+	global colors
 	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
+	
+	colorIndex = 0
+
+	#bst = BinarySearchTree()
+	
+
+	
 	while 1:
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
-		print "saving labeled segmentation"
 		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		segments = extractSegments(frame, segmented)
-		features = featureExtractor(detector, extractor, segments, frameNumber)
+		features, shapes = featureExtractor(detector, extractor, segments)
+		featureMatches = matchFinder(features, objects, frameNumber, colorIndex, matcher, shapes)
+		#featureMatches = bst.startSearch(features, matcher, colorIndex)
 		
-		featureMatches = []
-		for a, feature in enumerate(features):
-			isMatch = False
-			for b, data in enumerate(database):
-				if (data.descriptors != None and feature.descriptors != None):
-					matches = matcher.knnMatch(data.descriptors, feature.descriptors, k = 2)
-					pairs = filterMatches(data.keypoints, feature.keypoints, matches)
-					if len(pairs) >= 7:
-						featureMatches.append(Match(data, feature, pairs))
-						isMatch = True
-			if isMatch == False:
-				database.append(feature)
-		
-		colorIndex = 0
+		# Render object bounding box, keypoints and name if found in current frame
+		lastName = ""
 		for match in featureMatches:
-			cv2.rectangle(frame, match.min, match.max, colors[colorIndex % len(colors)], 2)
-			cv2.putText(frame, match.dbFeature.name, match.min, cv2.FONT_HERSHEY_PLAIN, 2, colors[colorIndex % len(colors)], 2)
 			for pair in match.keypointPairs:
-				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])), colors[colorIndex % len(colors)], 1)
-			colorIndex += 1
+				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])), match.object.color, 1)
+			cv2.rectangle(frame, match.min, match.max, match.object.color, 2)
+			if lastName != match.object.name:
+				cv2.putText(frame, match.object.name, match.min, cv2.FONT_HERSHEY_PLAIN, 2, match.object.color, 2)
+				cv2.putText(frame, match.object.shape, match.min, cv2.FONT_HERSHEY_PLAIN, 2, match.object.color, 2)
+			lastName = match.object.name
 		
 		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
 		print 'saving image', frameNumber
