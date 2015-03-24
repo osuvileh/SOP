@@ -3,6 +3,7 @@ import cv2.cv as cv
 import numpy
 from skimage.measure import label
 from skimage.morphology import square
+<<<<<<< HEAD
 import random
 class BinarySearchTree:
 	"""A binary search tree implementation"""
@@ -155,6 +156,14 @@ class BinarySearchTree:
 			else:
 				node = node.right
 		return node
+=======
+
+class Object:
+	def __init__(self, name, color):
+		self.features = []
+		self.name = name
+		self.color = color
+>>>>>>> abd74e5bb61ff8399fde050182356e154b7fbd99
 	
 
 class Object:
@@ -241,10 +250,15 @@ def featureExtractor(detector, extractor, segments):
 		ret, mask = cv2.threshold(segment, 0, 255, cv2.THRESH_BINARY)
 		keypoints = detector.detect(segment, mask)
 		keypoints, descriptors = extractor.compute(segment, keypoints, mask)
+<<<<<<< HEAD
 		shape = shapeDetection(segment)
 		shapes.append(shape)
 		features.append(Feature(keypoints, descriptors))
 	return features, shapes;
+=======
+		features.append(Feature(keypoints, descriptors))
+	return features;
+>>>>>>> abd74e5bb61ff8399fde050182356e154b7fbd99
 
 def shapeDetection(image):
 	"""Detects object shape from image"""
@@ -325,13 +339,17 @@ def filterMatches(kp1, kp2, matches, ratio = 0.6):
 def main():
 	"""Main execution of the program"""
 	objects = []
+<<<<<<< HEAD
 	bst  = BinarySearchTree()
+=======
+>>>>>>> abd74e5bb61ff8399fde050182356e154b7fbd99
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
 	camera = cv2.VideoCapture("test2.mp4")
 	global frameNumber
 	frameNumber = 0
+<<<<<<< HEAD
 	# Colors for debugging, each object is given a color to differentiate in the debug image
 	global colors
 	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
@@ -341,6 +359,12 @@ def main():
 	#bst = BinarySearchTree()
 	
 
+=======
+	
+	# Colors for debugging, each object is given a color to differentiate in the debug image
+	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
+	colorIndex = 0
+>>>>>>> abd74e5bb61ff8399fde050182356e154b7fbd99
 	
 	while 1:
 		ret, frame = camera.read()
@@ -348,10 +372,60 @@ def main():
 		segmented = segmentation(frame)
 		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		segments = extractSegments(frame, segmented)
+<<<<<<< HEAD
 		features, shapes = featureExtractor(detector, extractor, segments)
 		featureMatches = matchFinder(features, objects, frameNumber, colorIndex, matcher, shapes)
 		#featureMatches = bst.startSearch(features, matcher, colorIndex)
 		
+=======
+		features = featureExtractor(detector, extractor, segments)
+		
+		# Iterate through each feature found in the frame
+		featureMatches = []
+		for a, feature in enumerate(features):
+			isKnownObject = False
+			b = 0
+			
+			# Iterate through every known object
+			while b < len(objects):
+				object = objects[b]
+				
+				# To limit processing power needed only n newest occurences of an object are kept
+				if len(object.features) > 5:
+					object.features = object.features[1:]
+				isSameObject = False
+				
+				# Iterate through each occurence of the object
+				for c, data in enumerate(object.features):
+					if (data.descriptors != None and feature.descriptors != None):
+						matches = matcher.knnMatch(data.descriptors, feature.descriptors, k = 2)
+						pairs = filterMatches(data.keypoints, feature.keypoints, matches)
+						# Keypoints are matched and filtered
+						# If n matched pairs remain feature is declared matching
+						if len(pairs) >= 10:
+							featureMatches.append(Match(object, feature, pairs))
+							isSameObject = True
+							
+				# The feature is the same object if the keypoints match with the currently iterating object
+				if isSameObject and isKnownObject:
+					 # Object is deleted from the pool of known objects if feature found has already been found previous objects
+					 # This is a crude way of removing duplicate objects
+					objects.pop(b)
+				else:
+					if isSameObject:
+						isKnownObject = True
+						object.features.append(feature)
+					b += 1
+				
+			# This feature is a known object if its keypoints match with one existing object
+			if not isKnownObject:
+				# If the feature is not a known object, add it as a the first occurence of a new object
+				object = Object(str(frameNumber) + str(a), colors[colorIndex % len(colors)])
+				object.features.append(feature)
+				objects.append(object)
+				colorIndex += 1
+		
+>>>>>>> abd74e5bb61ff8399fde050182356e154b7fbd99
 		# Render object bounding box, keypoints and name if found in current frame
 		lastName = ""
 		for match in featureMatches:
@@ -360,7 +434,10 @@ def main():
 			cv2.rectangle(frame, match.min, match.max, match.object.color, 2)
 			if lastName != match.object.name:
 				cv2.putText(frame, match.object.name, match.min, cv2.FONT_HERSHEY_PLAIN, 2, match.object.color, 2)
+<<<<<<< HEAD
 				cv2.putText(frame, match.object.shape, match.min, cv2.FONT_HERSHEY_PLAIN, 2, match.object.color, 2)
+=======
+>>>>>>> abd74e5bb61ff8399fde050182356e154b7fbd99
 			lastName = match.object.name
 		
 		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
