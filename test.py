@@ -243,23 +243,42 @@ def featureExtractor(detector, extractor, segments):
 		keypoints = detector.detect(segment, mask)
 		keypoints, descriptors = extractor.compute(segment, keypoints, mask)
 
-		shape = shapeDetection(segment)
+		shape = shapeDetection(segment, i)
 		shapes.append(shape)
 		features.append(Feature(keypoints, descriptors))
 	return features, shapes;
 
 
-def shapeDetection(image):
-	"""Detects object shape from image"""
-	shape = None
-	#Check if object shape is circle
-	circle = cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 2, 100)
-	if circle is not None:
-			shape = "circle"
-			circles = numpy.round(circle[0,:]).astype("int")
-			for(x,y,r) in circles:
-				cv2.circle(image,(x,y), r,(55, 150, 0), 4)
-	return shape
+def shapeDetection(image,i):
+        """Detects object shape from image"""
+
+        shape = None
+        #Check if object shape is circle
+        circle = cv2.HoughCircles(image, cv2.cv.CV_HOUGH_GRADIENT, 2, 100)
+        if circle is not None:
+                shape = "circle"
+                circles = numpy.round(circle[0,:]).astype("int")
+                for(x,y,r) in circles:
+                        cv2.circle(image,(x,y), r,(60, 150, 0), 4)
+                cv2.putText(image,str(shape),(150,150), cv2.FONT_HERSHEY_PLAIN, 2,(255,255,255),2)
+                cv2.imwrite("%i%s%i%s" % (frameNumber,"+", i, 'x.jpg'), image)
+                return shape
+        
+        (other, _) = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        if other is not None:
+                for contours in other:
+                        print "Contours: " +str(len(contours))
+                        if 270 > len(contours)> 191:
+                                cv2.drawContours(image, [contours],-1,(60,150,0),2)
+                                shape = "controller"
+                                cv2.putText(image,str(shape),(150,150), cv2.FONT_HERSHEY_PLAIN, 2,(255,255,255),2)
+                                cv2.imwrite("%i%s%i%s" % (frameNumber,"+", i, 'x.jpg'), image)
+                        if 10 > len(contours) > 3:
+                                cv2.drawContours(image, [contours],-1,(60,50,0),2)
+                                shape = "square"
+                                cv2.putText(image,str(shape),(150,150), cv2.FONT_HERSHEY_PLAIN, 2,(255,255,255),2)
+                                cv2.imwrite("%i%s%i%s" % (frameNumber,"+", i, 'x.jpg'), image)                
+                        return shape
 
 def matchFinder(features, objects, frameNumber, colorIndex, matcher, shapes):
 	"""Matches object features against database"""
