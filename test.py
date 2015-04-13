@@ -267,7 +267,7 @@ def shapeDetection(image,i):
         (other, _) = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if other is not None:
                 for contours in other:
-                        print "Contours: " +str(len(contours))
+                        #print "Contours: " +str(len(contours))
                         if 270 > len(contours)> 191:
                                 cv2.drawContours(image, [contours],-1,(60,150,0),2)
                                 shape = "controller"
