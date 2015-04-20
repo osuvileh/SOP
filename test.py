@@ -3,6 +3,7 @@ import cv2.cv as cv
 import numpy
 from skimage.measure import label
 from skimage.morphology import square
+import time
 
 class Object:
 	def __init__(self, name):
@@ -96,12 +97,12 @@ def main():
 	extractor = cv2.DescriptorExtractor_create("ORB")
 	camera = cv2.VideoCapture("test2.mp4")
 	frameNumber = 0
+	frameTime = time.time()
 	
 	while 1:
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
-		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		segments, bounds = extractSegments(frame, segmented)
 		features = featureExtractor(detector, extractor, segments, bounds)
 		
@@ -127,7 +128,7 @@ def main():
 						pairs = filterMatches(data.keypoints, feature.keypoints, matches)
 						# Keypoints are matched and filtered
 						# If n matched pairs remain feature is declared matching
-						if len(pairs) >= 10:
+						if len(pairs) >= 7:
 							featureMatches.append(Match(object, feature, pairs))
 							isSameObject = True
 							
@@ -158,13 +159,17 @@ def main():
 				cv2.putText(frame, match.object.name, tuple(match.feature.bounds[:2]), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 0), 2)
 			lastName = match.object.name
 		
-		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
-		print 'saving image', frameNumber
+		#cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		
-		for i, segment in enumerate(segments):
-			cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
+		#cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
+		#print 'saving image', frameNumber
+		
+		#for i, segment in enumerate(segments):
+		#	cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
 		
 		frameNumber += 1
+		print 1.0 / (time.time() - frameTime)
+		frameTime = time.time()
 
 if __name__ == '__main__':
 	try:
