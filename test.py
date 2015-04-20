@@ -5,42 +5,21 @@ from skimage.measure import label
 from skimage.morphology import square
 
 class Object:
-	def __init__(self, name, color):
+	def __init__(self, name):
 		self.features = []
 		self.name = name
-		self.color = color
 	
 class Feature:
-	def __init__(self, keypoints, descriptors):
+	def __init__(self, keypoints, descriptors, bounds):
 		self.keypoints = keypoints
 		self.descriptors = descriptors
+		self.bounds = bounds
 		
 class Match:
 	def __init__(self, object, feature, keypointPairs):
 		self.object = object
 		self.feature = feature
 		self.keypointPairs = keypointPairs
-		self._calculateBoundingBox()
-		
-	def _calculateBoundingBox(self):
-		"""Private function for calculating bounding box of keypoints of the new feature"""
-		minX = 9999
-		minY = 9999
-		maxX = -9999
-		maxY = -9999
-		for pair in self.keypointPairs:
-			if minX > pair[1].pt[0]:
-				minX = pair[1].pt[0]
-			if minY > pair[1].pt[1]:
-				minY = pair[1].pt[1]
-			
-			if maxX < pair[1].pt[0]:
-				maxX = pair[1].pt[0]
-			if maxY < pair[1].pt[1]:
-				maxY = pair[1].pt[1]
-				
-		self.min = (int(minX), int(minY))
-		self.max = (int(maxX), int(maxY))
 	
 class Database:
 	def __init(self):
@@ -66,22 +45,29 @@ def segmentation(image):
 def extractSegments(image, segmented):
 	"""Extracts segments from labeled image"""
 	segments = []
+	bounds = []
 	values = numpy.unique(segmented)
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	for value in values:
 		segment = gray.copy()
 		segment[segmented != value] = 0
-		segments.append(segment)
-	return segments;
+		_, thresh = cv2.threshold(segment, 1, 255, cv2.THRESH_BINARY)
+		contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		x, y, w, h = cv2.boundingRect(contours[0])
+		imgHeight, imgWidth = segment.shape[:2]
+		if w < imgWidth * 0.98 and h < imgHeight * 0.98:
+			segments.append(segment[y:y+h,x:x+w])
+			bounds.append([x, y, x+w, y+h])
+	return segments, bounds;
 
-def featureExtractor(detector, extractor, segments):
+def featureExtractor(detector, extractor, segments, bounds):
 	"""Extracts features from segmented image(s)"""
 	features = []
 	for i, segment in enumerate(segments):
 		ret, mask = cv2.threshold(segment, 0, 255, cv2.THRESH_BINARY)
 		keypoints = detector.detect(segment, mask)
 		keypoints, descriptors = extractor.compute(segment, keypoints, mask)
-		features.append(Feature(keypoints, descriptors))
+		features.append(Feature(keypoints, descriptors, bounds[i]))
 	return features;
 
 def matchFinder(features):
@@ -111,17 +97,13 @@ def main():
 	camera = cv2.VideoCapture("test2.mp4")
 	frameNumber = 0
 	
-	# Colors for debugging, each object is given a color to differentiate in the debug image
-	colors = [(255,0,0), (0,255,0), (0,0,255), (255,255,0), (255,0,255), (0,255,255)]
-	colorIndex = 0
-	
 	while 1:
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
 		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
-		segments = extractSegments(frame, segmented)
-		features = featureExtractor(detector, extractor, segments)
+		segments, bounds = extractSegments(frame, segmented)
+		features = featureExtractor(detector, extractor, segments, bounds)
 		
 		# Iterate through each feature found in the frame
 		featureMatches = []
@@ -134,7 +116,7 @@ def main():
 				object = objects[b]
 				
 				# To limit processing power needed only n newest occurences of an object are kept
-				if len(object.features) > 5:
+				if len(object.features) > 10:
 					object.features = object.features[1:]
 				isSameObject = False
 				
@@ -163,19 +145,17 @@ def main():
 			# This feature is a known object if its keypoints match with one existing object
 			if not isKnownObject:
 				# If the feature is not a known object, add it as a the first occurence of a new object
-				object = Object(str(frameNumber) + str(a), colors[colorIndex % len(colors)])
+				object = Object(str(frameNumber) + str(a))
 				object.features.append(feature)
 				objects.append(object)
-				colorIndex += 1
+				featureMatches.append(Match(object, feature, None))
 		
 		# Render object bounding box, keypoints and name if found in current frame
 		lastName = ""
 		for match in featureMatches:
-			for pair in match.keypointPairs:
-				cv2.line(frame, (int(pair[0].pt[0]), int(pair[0].pt[1])),(int(pair[1].pt[0]), int(pair[1].pt[1])), match.object.color, 1)
-			cv2.rectangle(frame, match.min, match.max, match.object.color, 2)
+			cv2.rectangle(frame, tuple(match.feature.bounds[:2]), tuple(match.feature.bounds[2:4]), (255, 255, 0), 2)
 			if lastName != match.object.name:
-				cv2.putText(frame, match.object.name, match.min, cv2.FONT_HERSHEY_PLAIN, 2, match.object.color, 2)
+				cv2.putText(frame, match.object.name, tuple(match.feature.bounds[:2]), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 0), 2)
 			lastName = match.object.name
 		
 		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
