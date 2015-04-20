@@ -117,7 +117,7 @@ def main():
 				object = objects[b]
 				
 				# To limit processing power needed only n newest occurences of an object are kept
-				if len(object.features) > 10:
+				if len(object.features) > 1:
 					object.features = object.features[1:]
 				isSameObject = False
 				
