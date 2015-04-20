@@ -5,6 +5,9 @@ from skimage.measure import label
 from skimage.morphology import square
 import time
 
+KEYPOINT_MATCH_AMOUNT = 7
+MAXIMUM_FEATURE_COUNT = 10
+
 class Object:
 	def __init__(self, name):
 		self.features = []
@@ -68,7 +71,8 @@ def featureExtractor(detector, extractor, segments, bounds):
 		_, mask = cv2.threshold(segment, 0, 255, cv2.THRESH_BINARY)
 		keypoints = detector.detect(segment, mask)
 		keypoints, descriptors = extractor.compute(segment, keypoints, mask)
-		features.append(Feature(keypoints, descriptors, bounds[i]))
+		if len(keypoints) >= KEYPOINT_MATCH_AMOUNT:
+			features.append(Feature(keypoints, descriptors, bounds[i]))
 	return features;
 
 def matchFinder(features):
@@ -117,7 +121,7 @@ def main():
 				object = objects[b]
 				
 				# To limit processing power needed only n newest occurences of an object are kept
-				if len(object.features) > 10:
+				if len(object.features) > MAXIMUM_FEATURE_COUNT:
 					object.features.pop(0)
 				isSameObject = False
 				
@@ -128,14 +132,14 @@ def main():
 						pairs = filterMatches(data.keypoints, feature.keypoints, matches)
 						# Keypoints are matched and filtered
 						# If n matched pairs remain feature is declared matching
-						if len(pairs) >= 10:
+						if len(pairs) >= KEYPOINT_MATCH_AMOUNT:
 							featureMatches.append(Match(object, feature, pairs))
 							isSameObject = True
 							
 				# The feature is the same object if the keypoints match with the currently iterating object
 				if isSameObject and isKnownObject:
-					 # Object is deleted from the pool of known objects if feature found has already been found previous objects
-					 # This is a crude way of removing duplicate objects
+					# Object is deleted from the pool of known objects if feature found has already been found previous objects
+					# This is a crude way of removing duplicate objects
 					objects.pop(b)
 				else:
 					if isSameObject:
