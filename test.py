@@ -31,7 +31,7 @@ def segmentation(image):
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
-	ret, bw = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+	_, bw = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 	
 	# Close binary image
 	result = cv2.dilate(bw, square(10), iterations = 1)
@@ -65,7 +65,7 @@ def featureExtractor(detector, extractor, segments, bounds):
 	"""Extracts features from segmented image(s)"""
 	features = []
 	for i, segment in enumerate(segments):
-		ret, mask = cv2.threshold(segment, 0, 255, cv2.THRESH_BINARY)
+		_, mask = cv2.threshold(segment, 0, 255, cv2.THRESH_BINARY)
 		keypoints = detector.detect(segment, mask)
 		keypoints, descriptors = extractor.compute(segment, keypoints, mask)
 		features.append(Feature(keypoints, descriptors, bounds[i]))
@@ -117,8 +117,8 @@ def main():
 				object = objects[b]
 				
 				# To limit processing power needed only n newest occurences of an object are kept
-				if len(object.features) > 1:
-					object.features = object.features[1:]
+				if len(object.features) > 10:
+					object.features.pop(0)
 				isSameObject = False
 				
 				# Iterate through each occurence of the object
@@ -128,7 +128,7 @@ def main():
 						pairs = filterMatches(data.keypoints, feature.keypoints, matches)
 						# Keypoints are matched and filtered
 						# If n matched pairs remain feature is declared matching
-						if len(pairs) >= 7:
+						if len(pairs) >= 10:
 							featureMatches.append(Match(object, feature, pairs))
 							isSameObject = True
 							
@@ -154,18 +154,18 @@ def main():
 		# Render object bounding box, keypoints and name if found in current frame
 		lastName = ""
 		for match in featureMatches:
-			cv2.rectangle(frame, tuple(match.feature.bounds[:2]), tuple(match.feature.bounds[2:4]), (255, 255, 0), 2)
 			if lastName != match.object.name:
+				cv2.rectangle(frame, tuple(match.feature.bounds[:2]), tuple(match.feature.bounds[2:4]), (255, 255, 0), 2)
 				cv2.putText(frame, match.object.name, tuple(match.feature.bounds[:2]), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 0), 2)
 			lastName = match.object.name
 		
-		#cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
+		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		
-		#cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
-		#print 'saving image', frameNumber
+		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
+		print 'saving image', frameNumber
 		
-		#for i, segment in enumerate(segments):
-		#	cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
+		for i, segment in enumerate(segments):
+			cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
 		
 		frameNumber += 1
 		print 1.0 / (time.time() - frameTime)
