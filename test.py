@@ -59,7 +59,7 @@ def extractSegments(image, segmented):
 		contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		x, y, w, h = cv2.boundingRect(contours[0])
 		imgHeight, imgWidth = segment.shape[:2]
-		if w < imgWidth * 0.98 and h < imgHeight * 0.98:
+		if w > 1 and h > 1 and w < imgWidth * 0.98 and h < imgHeight * 0.98:
 			segments.append(segment[y:y+h,x:x+w])
 			bounds.append([x, y, x+w, y+h])
 	return segments, bounds;
@@ -156,12 +156,9 @@ def main():
 				featureMatches.append(Match(object, feature, None))
 		
 		# Render object bounding box, keypoints and name if found in current frame
-		lastName = ""
 		for match in featureMatches:
-			if lastName != match.object.name:
-				cv2.rectangle(frame, tuple(match.feature.bounds[:2]), tuple(match.feature.bounds[2:4]), (255, 255, 0), 2)
-				cv2.putText(frame, match.object.name, tuple(match.feature.bounds[:2]), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 0), 2)
-			lastName = match.object.name
+			cv2.rectangle(frame, tuple(match.feature.bounds[:2]), tuple(match.feature.bounds[2:4]), (0, 0, 255), 2)
+			cv2.putText(frame, match.object.name, (match.feature.bounds[0], match.feature.bounds[1] + 24), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
 		
 		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		
@@ -172,7 +169,7 @@ def main():
 			cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
 		
 		frameNumber += 1
-		print 1.0 / (time.time() - frameTime)
+		print str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects"
 		frameTime = time.time()
 
 if __name__ == '__main__':
