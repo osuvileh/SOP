@@ -3,6 +3,7 @@ import cv2.cv as cv
 import numpy
 from skimage.measure import label, regionprops
 from skimage.morphology import square
+from scipy import ndimage
 import time
 
 KEYPOINT_MATCH_AMOUNT = 7
@@ -44,7 +45,7 @@ def segmentation(image):
 	result = cv2.erode(result, square(10), iterations = 1)
 	result = cv2.dilate(result, square(10), iterations = 1)
 	
-	return label(result) * 50
+	return label(result)
 	
 def extractSegments(image, segmented):
 	"""Extracts segments from labeled image"""
@@ -52,13 +53,13 @@ def extractSegments(image, segmented):
 	bounds = []
 	values = numpy.unique(segmented)
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
+	imgHeight, imgWidth = gray.shape[:2]
 	for value in values:
 		segment = gray.copy()
 		segment[segmented != value] = 0
 		_, thresh = cv2.threshold(segment, 1, 255, cv2.THRESH_BINARY)
-		contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 		x, y, w, h = cv2.boundingRect(contours[0])
-		imgHeight, imgWidth = segment.shape[:2]
 		if w > 1 and h > 1 and w < imgWidth * 0.98 and h < imgHeight * 0.98:
 			segments.append(segment[y:y+h,x:x+w])
 			bounds.append([x, y, x+w, y+h])
@@ -99,13 +100,14 @@ def main():
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
-	camera = cv2.VideoCapture("joukko.mp4")
+	camera = cv2.VideoCapture("test2.mp4")
 	frameNumber = 0
 	frameTime = time.time()
 	
 	txtfile = open("results.txt", "w")
 	
 	while 1:
+		
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
@@ -132,9 +134,11 @@ def main():
 					object.features.pop(0)
 				isSameObject = False
 				
+				if a == 0:
+					numFeatures += len(object.features)
+				
 				# Iterate through each occurence of the object
 				for c, data in enumerate(object.features):
-					numFeatures += 1
 					if (data.descriptors != None and feature.descriptors != None):
 						matches = matcher.knnMatch(data.descriptors, feature.descriptors, k = 2)
 						pairs = filterMatches(data.keypoints, feature.keypoints, matches)
@@ -179,8 +183,8 @@ def main():
 		#	cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
 		
 		frameNumber += 1
-		txtfile.write(str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features\n\n")
-		print str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features"
+		txtfile.write(str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(len(segments)) + " segments\n\n")
+		print str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(len(segments)) + " segments"
 		frameTime = time.time()
 
 if __name__ == '__main__':
