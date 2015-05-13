@@ -71,8 +71,8 @@ def featureExtractor(detector, extractor, segments, bounds):
 		_, mask = cv2.threshold(segment, 0, 255, cv2.THRESH_BINARY)
 		keypoints = detector.detect(segment, mask)
 		keypoints, descriptors = extractor.compute(segment, keypoints, mask)
-		if len(keypoints) >= KEYPOINT_MATCH_AMOUNT:
-			features.append(Feature(keypoints, descriptors, bounds[i]))
+		#if len(keypoints) >= KEYPOINT_MATCH_AMOUNT:
+		features.append(Feature(keypoints, descriptors, bounds[i]))
 	return features;
 
 def matchFinder(features):
@@ -99,7 +99,7 @@ def main():
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
-	camera = cv2.VideoCapture("test2.mp4")
+	camera = cv2.VideoCapture("identtiset2.mp4")
 	frameNumber = 0
 	frameTime = time.time()
 	
@@ -156,17 +156,17 @@ def main():
 				featureMatches.append(Match(object, feature, None))
 		
 		# Render object bounding box, keypoints and name if found in current frame
-		for match in featureMatches:
-			cv2.rectangle(frame, tuple(match.feature.bounds[:2]), tuple(match.feature.bounds[2:4]), (0, 0, 255), 2)
-			cv2.putText(frame, match.object.name, (match.feature.bounds[0], match.feature.bounds[1] + 24), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 255), 2)
+		#for match in featureMatches:
+		#	cv2.rectangle(frame, tuple(match.feature.bounds[:2]), tuple(match.feature.bounds[2:4]), (0, 255, 0), 2)
+		#	cv2.putText(frame, match.object.name, (match.feature.bounds[0], match.feature.bounds[1] + 24), cv2.FONT_HERSHEY_PLAIN, 2, (0, 255, 0), 2)
 		
-		cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
+		#cv2.imwrite("%i%s" % (frameNumber, 'labels.jpg'), segmented)
 		
-		cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
-		print 'saving image', frameNumber
+		#cv2.imwrite("%i%s" % (frameNumber, '.jpg'), frame)
+		#print 'saving image', frameNumber
 		
-		for i, segment in enumerate(segments):
-			cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
+		#for i, segment in enumerate(segments):
+		#	cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
 		
 		frameNumber += 1
 		print str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects"
