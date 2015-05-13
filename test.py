@@ -6,7 +6,7 @@ from skimage.morphology import square
 import time
 
 KEYPOINT_MATCH_AMOUNT = 7
-MAXIMUM_FEATURE_COUNT = 1
+MAXIMUM_FEATURE_COUNT = 10
 
 class Object:
 	def __init__(self, name):
@@ -55,13 +55,6 @@ def extractSegments(image, segmented):
 	for value in values:
 		segment = gray.copy()
 		segment[segmented != value] = 0
-		_, thresh = cv2.threshold(segment, 1, 255, cv2.THRESH_BINARY)
-		contours, hierarchy = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-		x, y, w, h = cv2.boundingRect(contours[0])
-		imgHeight, imgWidth = segment.shape[:2]
-		if w > 1 and h > 1 and w < imgWidth * 0.98 and h < imgHeight * 0.98:
-			segments.append(segment[y:y+h,x:x+w])
-			bounds.append([x, y, x+w, y+h])
 	return segments, bounds;
 
 def featureExtractor(detector, extractor, segments, bounds):
