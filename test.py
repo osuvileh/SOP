@@ -6,7 +6,7 @@ from skimage.morphology import square
 import time
 
 KEYPOINT_MATCH_AMOUNT = 7
-MAXIMUM_FEATURE_COUNT = 10
+MAXIMUM_FEATURE_COUNT = 1
 
 class Object:
 	def __init__(self, name):
