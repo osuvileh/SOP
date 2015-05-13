@@ -107,11 +107,11 @@ def main():
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
-		print "Segmentation: " + str(1.0 / (time.time() - frameTime))
+		print "Segmentation: " + str(time.time() - frameTime)
 		segments, bounds = extractSegments(frame, segmented)
-		print "Segment extraction: " + str(1.0 / (time.time() - frameTime))
+		print "Segment extraction: " + str(time.time() - frameTime)
 		features = featureExtractor(detector, extractor, segments, bounds)
-		print "Feature extraction: " + str(1.0 / (time.time() - frameTime))
+		print "Feature extraction: " + str(time.time() - frameTime)
 		
 		# Iterate through each feature found in the frame
 		featureMatches = []
@@ -158,7 +158,7 @@ def main():
 				objects.append(object)
 				featureMatches.append(Match(object, feature, None))
 				
-		print "Feature matching: " + str(1.0 / (time.time() - frameTime))
+		print "Feature matching: " + str(time.time() - frameTime)
 		
 		# Render object bounding box, keypoints and name if found in current frame
 		#for match in featureMatches:
