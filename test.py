@@ -9,6 +9,8 @@ import time
 KEYPOINT_MATCH_AMOUNT = 7
 MAXIMUM_FEATURE_COUNT = 10
 
+frameTime = time.time()
+
 class Object:
 	def __init__(self, name):
 		self.features = []
@@ -57,8 +59,12 @@ def extractSegments(image, segmented):
 	for value in values:
 		segment = gray.copy()
 		segment[segmented != value] = 0
+		print "start"
+		print time.time() - frameTime
 		_, thresh = cv2.threshold(segment, 1, 255, cv2.THRESH_BINARY)
-		contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		print time.time() - frameTime
+		contours, _ = cv2.findContours(segment, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+		print time.time() - frameTime
 		x, y, w, h = cv2.boundingRect(contours[0])
 		if w > 1 and h > 1 and w < imgWidth * 0.98 and h < imgHeight * 0.98:
 			segments.append(segment[y:y+h,x:x+w])
