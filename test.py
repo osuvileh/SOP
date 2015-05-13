@@ -57,9 +57,11 @@ def extractSegments(image, segmented):
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	imgHeight, imgWidth = gray.shape[:2]
 	for value in values:
-		segment = gray.copy()
-		segment[segmented != value] = 0
 		print "start"
+		print time.time() - frameTime
+		segment = gray.copy()
+		print time.time() - frameTime
+		segment[segmented != value] = 0
 		print time.time() - frameTime
 		_, thresh = cv2.threshold(segment, 1, 255, cv2.THRESH_BINARY)
 		print time.time() - frameTime
