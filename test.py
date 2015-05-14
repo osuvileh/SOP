@@ -9,8 +9,6 @@ import time
 KEYPOINT_MATCH_AMOUNT = 7
 MAXIMUM_FEATURE_COUNT = 10
 
-testTime = time.time()
-
 class Object:
 	def __init__(self, name):
 		self.features = []
@@ -113,6 +111,7 @@ def main():
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
+		numSegments = numpy.unique(segmented)
 		txtfile.write("Segmentation: " + str(time.time() - frameTime) + "\n")
 		segments, bounds = extractSegments(frame, segmented)
 		txtfile.write("Segment extraction: " + str(time.time() - frameTime) + "\n")
@@ -185,8 +184,8 @@ def main():
 		#	cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
 		
 		frameNumber += 1
-		txtfile.write(str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(len(segments)) + " segments\n\n")
-		print str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(len(segments)) + " segments"
+		txtfile.write(str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(numSegments) + " segments\n\n")
+		print str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(numSegments) + " segments"
 		frameTime = time.time()
 
 if __name__ == '__main__':
