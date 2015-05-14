@@ -103,6 +103,9 @@ def main():
 	camera = cv2.VideoCapture("test.mp4")
 	frameNumber = 0
 	frameTime = time.time()
+	segTime = 0
+	featTime = 0
+	avgTime = 0
 	
 	txtfile = open("results.txt", "w")
 	
@@ -110,11 +113,16 @@ def main():
 		
 		ret, frame = camera.read()
 		
+		tempTime = time.time()
 		segmented = segmentation(frame)
 		numSegments = len(numpy.unique(segmented))
 		txtfile.write("Segmentation: " + str(time.time() - frameTime) + "\n")
 		segments, bounds = extractSegments(frame, segmented)
+		segTime += time.time() - tempTime
+		
 		txtfile.write("Segment extraction: " + str(time.time() - frameTime) + "\n")
+		
+		tempTime = time.time()
 		features = featureExtractor(detector, extractor, segments, bounds)
 		txtfile.write("Feature extraction: " + str(time.time() - frameTime) + "\n")
 		
@@ -169,6 +177,8 @@ def main():
 				featureMatches.append(Match(object, feature, None))
 				
 		txtfile.write("Feature matching: " + str(time.time() - frameTime) + "\n")
+		featTime += time.time() - tempTime
+		avgTime += time.time() - frameTime
 		
 		# Render object bounding box, keypoints and name if found in current frame
 		#for match in featureMatches:
@@ -184,8 +194,11 @@ def main():
 		#	cv2.imwrite("%i%s%i%s" % (frameNumber, '_seg', i, '.jpg'), segment)
 		
 		frameNumber += 1
-		txtfile.write(str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(numSegments) + " segments\n\n")
-		print str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(numSegments) + " segments"
+		txtfile.write(str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(len(segments)) + "/" + str(numSegments) + " segments\n")
+		txtfile.write("Avg segmentation time: " + str(segTime / frameNumber) + "\n")
+		txtfile.write("Avg feature time: " + str(featTime / frameNumber) + "\n")
+		txtfile.write("Avg time: " + str(avgTime / frameNumber) + "\n\n")
+		print str(1.0 / (time.time() - frameTime)) + " fps with " + str(len(objects)) + " objects with sum of " + str(numFeatures) + " features and " + str(len(segments)) + "/" + str(numSegments) + " segments"
 		frameTime = time.time()
 
 if __name__ == '__main__':
