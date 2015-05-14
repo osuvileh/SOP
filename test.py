@@ -57,16 +57,10 @@ def extractSegments(image, segmented):
 	gray = cv2.cvtColor(image, cv2.cv.CV_RGB2GRAY)
 	imgHeight, imgWidth = gray.shape[:2]
 	for value in values:
-		print "start"
-		print time.time() - testTime
 		segment = gray.copy()
-		print time.time() - testTime
 		segment[segmented != value] = 0
-		print time.time() - testTime
 		_, thresh = cv2.threshold(segment, 1, 255, cv2.THRESH_BINARY)
-		print time.time() - testTime
 		contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-		print time.time() - testTime
 		x, y, w, h = cv2.boundingRect(contours[0])
 		if w > 1 and h > 1 and w < imgWidth * 0.98 and h < imgHeight * 0.98:
 			segments.append(segment[y:y+h,x:x+w])
