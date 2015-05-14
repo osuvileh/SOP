@@ -102,7 +102,7 @@ def main():
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
-	camera = cv2.VideoCapture("test2.mp4")
+	camera = cv2.VideoCapture(0)
 	frameNumber = 0
 	frameTime = time.time()
 	
