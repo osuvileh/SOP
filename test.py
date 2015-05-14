@@ -100,7 +100,7 @@ def main():
 	matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
 	detector = cv2.FeatureDetector_create("ORB")
 	extractor = cv2.DescriptorExtractor_create("ORB")
-	camera = cv2.VideoCapture(0)
+	camera = cv2.VideoCapture("test.mp4")
 	frameNumber = 0
 	frameTime = time.time()
 	
@@ -111,7 +111,7 @@ def main():
 		ret, frame = camera.read()
 		
 		segmented = segmentation(frame)
-		numSegments = numpy.unique(segmented)
+		numSegments = len(numpy.unique(segmented))
 		txtfile.write("Segmentation: " + str(time.time() - frameTime) + "\n")
 		segments, bounds = extractSegments(frame, segmented)
 		txtfile.write("Segment extraction: " + str(time.time() - frameTime) + "\n")
